@@ -65,7 +65,7 @@ export async function createAccountInACurrency(user_email, currency) {
     return { account_details };
   } catch (error) {
     console.error(error.message);
-    throw err;
+    throw error;
   }
 }
 // Get their accounts
@@ -86,7 +86,7 @@ export async function getAccounts(user_email) {
     return false;
   } catch (err) {
     console.error(err.message);
-    throw err;
+    throw error;
   }
 }
 
@@ -109,7 +109,7 @@ export async function getSpecificAccount(user_email, account_number) {
     return result.rows;
   } catch (err) {
     console.error(err.message);
-    throw err;
+    throw error;
   }
 }
 
@@ -132,6 +132,6 @@ export async function deleteAccount(user_email, account_number) {
     return result.rows;
   } catch (err) {
     console.error(err.message);
-    throw err;
+    throw error;
   }
 }

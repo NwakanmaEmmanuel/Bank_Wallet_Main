@@ -15,6 +15,8 @@ import morgan from "morgan";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import dotenv from "dotenv";
+dotenv.config();
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -42,6 +44,8 @@ app.use("/bill-payment", billRoute);
 app.use("/withdraw", withdrawalsRoute);
 app.use("/transaction", transactionRoute);
 
-app.listen(6000, () => {
-  logger.info("Server running on port 6000");
+const PORT = process.env.PORT || 6000;
+
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
 });

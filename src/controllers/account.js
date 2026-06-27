@@ -37,7 +37,7 @@ export async function createADefaultAccount(req, res) {
 export async function createAnAccountInACurrency(req, res) {
   try {
     const user_email = req.user_email;
-    const currency = req.body.currency;
+    const currency = req.body.currency_code;
     const data = await createAccountInACurrency(user_email, currency);
     const { account_details } = data;
     if (!data) {

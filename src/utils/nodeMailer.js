@@ -9,13 +9,13 @@ export async function sendEmail(recipient, token) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "fadehandaniel2006@gmail.com",
-      pass: "tjio hfws okxo dywz",
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     },
   });
 
   const mailOptions = {
-    from: "fadehandaniel2006@gmail.com",
+    from: process.env.EMAIL_USER  ,
     to: recipient,
     subject: "PASSWORD RESET",
     text: `Here is the link to reset your password
@@ -38,13 +38,13 @@ export async function sendRegisterEmail(recipient) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "fadehandaniel2006@gmail.com",
-      pass: "tjio hfws okxo dywz",
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     },
   });
 
   const mailOptions = {
-    from: "fadehandaniel2006@gmail.com",
+    from: process.env.EMAIL_USER  ,
     to: recipient,
     subject: "REGISTRATION SUCCESSFUL",
     text: "Thank you for registering with DANNY PHATHOM TESTS",
@@ -63,13 +63,13 @@ export async function sendAdminRegisterEmail(recipient) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "fadehandaniel2006@gmail.com",
-      pass: "tjio hfws okxo dywz",
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     },
   });
 
   const mailOptions = {
-    from: "fadehandaniel2006@gmail.com",
+    from: process.env.EMAIL_USER  ,
     to: recipient,
     subject: "ADMIN REGISTRATION SUCCESSFUL",
     text: "Thank you for registering as an admin with DANNY PHATHOM TESTS",
@@ -88,13 +88,13 @@ export async function sendAdminRegisterTokenEmail(recipient, token) {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: "fadehandaniel2006@gmail.com",
-      pass: "tjio hfws okxo dywz",
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     },
   });
 
   const mailOptions = {
-    from: "fadehandaniel2006@gmail.com",
+    from: process.env.EMAIL_USER  ,
     to: recipient,
     subject: "USE THE TOKEN BELOW TO COMPLETE ADMIN REGISTRATION",
     text: `token: ${token}`,
