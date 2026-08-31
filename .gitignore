@@ -5,3 +5,4 @@ access.log
 node_modules/
 
 error.txt
+*log
