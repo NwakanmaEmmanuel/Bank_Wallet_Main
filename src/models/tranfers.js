@@ -1,6 +1,7 @@
 //Account Transfers
 
 import pool from "../config/db.js";
+import { AppError } from "../utils/AppError.js";
 import { currencyConverter } from "./layer.js";
 import { transferSchema } from "../validation/Schemas.js";
 import { getTransferSchema } from "../validation/Schemas.js";
@@ -95,14 +96,15 @@ export async function transferToAccount(user_email, payload) {
     );
 
     if (sender_account_balance === null) {
-      await dbClient.query("ROLLBACK");
-      return "You are not allowed to carry out this action";
+      throw new AppError(
+        "You are not allowed to carry out this action",
+        403
+      );
     }
 
     // Check if sender has enough money
-    if (sender_account_balance < amount) {
-      await dbClient.query("ROLLBACK");
-      return "Insufficient funds";
+   if (sender_account_balance < amount) {
+      throw new AppError("Insufficient funds", 400);
     }
 
     // Get receiver's account
@@ -112,9 +114,11 @@ export async function transferToAccount(user_email, payload) {
     );
 
     if (!receiver) {
-      await dbClient.query("ROLLBACK");
-      return "No user with the provided account number exists";
-    }
+    throw new AppError(
+      "No user with the provided account number exists",
+      404
+    );
+  }
 
     const receiver_currency = receiver.currency;
     const receiver_balance = receiver.balance;
