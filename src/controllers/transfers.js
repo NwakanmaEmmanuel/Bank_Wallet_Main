@@ -28,65 +28,50 @@ export async function transferToAnAccount(req, res, next) {
 }
 
 // Get details for a specific transfer
-export async function getATransfer(req, res) {
+// Get details for a specific transfer
+export async function getATransfer(req, res, next) {
   try {
     const user_email = req.user_email;
+
     const data = await getTransfer(user_email, req.body);
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Error Invalid Request" });
+
+    if (!data) {
+      return res.status(400).json({
+        error: "Invalid Request",
+      });
     }
-    if (data === "No transfer found") {
-      logger.error("No transfer found");
-      return res.status(404).json({ error: "No transfer found" });
-    }
-    if (data === "You are not allowed to carry out this action") {
-      logger.error("You are not allowed to carry out this action");
-      return res
-        .status(401)
-        .json({ error: "You are not allowed to carry out this action" });
-    }
+
     logger.info("Transfer details", data);
-    return res.status(201).json({
+
+    return res.status(200).json({
       message: "Transfer details",
       details: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
 // Get transfers associated with a user's account
-export async function getTransfersOnAnAccount(req, res) {
+export async function getTransfersOnAnAccount(req, res, next) {
   try {
     const user_email = req.user_email;
+
     const data = await getTransfersOnAccount(user_email, req.body);
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Error Invalid Request" });
-    }
+
     if (!data) {
-      logger.error("No transfers found");
-      return res.status(400).json({ error: "No transfers found" });
+      return res.status(400).json({
+        error: "No transfers found",
+      });
     }
-    if (data === "You are not allowed to carry out this action") {
-      logger.error("You are not allowed to carry out this action");
-      return res
-        .status(401)
-        .json({ error: "You are not allowed to carry out this action" });
-    }
+
     logger.info("Transfer details", data);
-    return res.status(201).json({
+
+    return res.status(200).json({
       message: "Transfer details",
       details: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }

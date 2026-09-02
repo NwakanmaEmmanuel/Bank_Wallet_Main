@@ -204,65 +204,71 @@ export async function transferToAccount(user_email, payload) {
 // Retrieve the details of a specific transfer.
 export async function getTransfer(user_email, payload) {
   const { value, error } = getTransferSchema.validate(payload);
+
   if (error) {
-    console.log(error);
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { account_number, transfer_id } = value;
+
   try {
     const query = `
       SELECT *
       FROM transfers
       WHERE transfer_id = $1 AND account_number = $2
     `;
+
     const values = [transfer_id, account_number];
+
     const result = await pool.query(query, values);
 
     if (!result.rows[0]) {
-      console.log("No transfer found");
-      return "No transfer found";
+      throw new AppError("No transfer found", 404);
     }
 
     if (result.rows[0].user_email !== user_email) {
-      console.log("You are not allowed to carry out this action");
-      return "You are not allowed to carry out this action";
+      throw new AppError(
+        "You are not allowed to carry out this action",
+        403
+      );
     }
 
-    console.log(result.rows[0]);
     return result.rows[0];
+
   } catch (error) {
-    console.error(err.message);
-    throw err;
+    console.error(error.message);
+    throw error;
   }
 }
-
 // Retrieve details of transfers on a specific account.
 export async function getTransfersOnAccount(user_email, payload) {
   const { value, error } = getTransfersOnAccountSchema.validate(payload);
+
   if (error) {
-    console.log(error);
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { account_number } = value;
+
   try {
     const query = `
       SELECT *
       FROM transfers
-      WHERE account_number = $1 
+      WHERE account_number = $1
+        AND user_email = $2
     `;
-    const values = [account_number];
+
+    const values = [account_number, user_email];
+
     const result = await pool.query(query, values);
-    if (!result.rows[0]) {
+
+    if (result.rows.length === 0) {
       return false;
-    }
-    if (result.rows[0].user_email !== user_email) {
-      console.log("You are not allowed to carry out this action");
-      return "You are not allowed to carry out this action";
     }
 
     return result.rows;
   } catch (error) {
-    console.error(err.message);
-    throw err;
+    console.error(error.message);
+    throw error;
   }
 }

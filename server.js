@@ -1,5 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
+import { errorHandler } from "./src/middlewares/errorHandler.js";
 import logger from "./src/config/logger.js";
 import cors from "cors";
 import superAdminRoute from "./src/routes/superAdminRoute.js";
@@ -45,6 +46,8 @@ app.use("/withdraw", withdrawalsRoute);
 app.use("/transaction", transactionRoute);
 
 const PORT = process.env.PORT || 6000;
+// Global error handler — must be after all routes
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
