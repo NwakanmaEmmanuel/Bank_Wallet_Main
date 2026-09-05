@@ -201,7 +201,7 @@ export async function transferToAccount(user_email, payload) {
   }
 }
 
-// Retrieve the details of a specific transfer.
+// Retrieving the details of a specific transfer.
 export async function getTransfer(user_email, payload) {
   const { value, error } = getTransferSchema.validate(payload);
 
