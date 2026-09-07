@@ -21,7 +21,11 @@ export async function depositToAccount(user_email, payload) {
     description,
   } = value;
 
+  const dbClient = await pool.connect();
+
   try {
+    await dbClient.query("BEGIN");
+
     const query = `
       SELECT *
       FROM account
@@ -30,7 +34,7 @@ export async function depositToAccount(user_email, payload) {
 
     const values = [account_number, user_email];
 
-    const result = await pool.query(query, values);
+    const result = await dbClient.query(query, values);
 
     if (!result.rows[0]) {
       throw new AppError(
@@ -44,6 +48,9 @@ export async function depositToAccount(user_email, payload) {
       result.rows[0].account_balance
     );
 
+    let deposit_amount;
+    let deposit_currency_code;
+
     if (account_currency !== deposit_currency) {
       // Currency Conversion
       const data = await currencyConverter(
@@ -52,98 +59,67 @@ export async function depositToAccount(user_email, payload) {
         amount
       );
 
-      const converted_balance = data.result;
-      const new_balance = account_balance + converted_balance;
-      const new_balance_db = new_balance.toFixed(2);
-
-      const query2 = `
-        UPDATE account
-        SET account_balance = $1
-        WHERE account_number = $2 AND currency_code = $3
-        RETURNING *
-      `;
-
-      const values2 = [
-        new_balance_db,
-        account_number,
-        account_currency,
-      ];
-
-      const result2 = await pool.query(query2, values2);
-
-      const now_balance = result2.rows[0].account_balance;
-
-      const query3 = `
-        INSERT INTO deposits
-        (user_email, description, account_number, amount, currency_code)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING *
-      `;
-
-      const values3 = [
-        user_email,
-        description,
-        account_number,
-        amount,
-        account_currency,
-      ];
-
-      const result3 = await pool.query(query3, values3);
-
-      const resulting = result3.rows[0];
-
-      return {
-        resulting,
-        now_balance,
-      };
+      deposit_amount = data.result;
+      deposit_currency_code = account_currency;
     } else {
-      const new_balance = account_balance + amount;
-      const new_balance_db = new_balance.toFixed(2);
-
-      const query2 = `
-        UPDATE account
-        SET account_balance = $1
-        WHERE account_number = $2 AND currency_code = $3
-        RETURNING *
-      `;
-
-      const values2 = [
-        new_balance_db,
-        account_number,
-        account_currency,
-      ];
-
-      const result2 = await pool.query(query2, values2);
-
-      const now_balance = result2.rows[0].account_balance;
-
-      const query3 = `
-        INSERT INTO deposits
-        (user_email, description, account_number, amount, currency_code)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING *
-      `;
-
-      const values3 = [
-        user_email,
-        description,
-        account_number,
-        amount,
-        deposit_currency,
-      ];
-
-      const result3 = await pool.query(query3, values3);
-
-      const resulting = result3.rows[0];
-
-      return {
-        resulting,
-        now_balance,
-      };
+      deposit_amount = amount;
+      deposit_currency_code = deposit_currency;
     }
+
+    const new_balance = account_balance + deposit_amount;
+    const new_balance_db = new_balance.toFixed(2);
+
+    const query2 = `
+      UPDATE account
+      SET account_balance = $1
+      WHERE account_number = $2
+        AND currency_code = $3
+      RETURNING *
+    `;
+
+    const values2 = [
+      new_balance_db,
+      account_number,
+      account_currency,
+    ];
+
+    const result2 = await dbClient.query(query2, values2);
+
+    const now_balance = result2.rows[0].account_balance;
+
+    const query3 = `
+      INSERT INTO deposits
+      (user_email, description, account_number, amount, currency_code)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+
+    const values3 = [
+      user_email,
+      description,
+      account_number,
+      amount,
+      deposit_currency_code,
+    ];
+
+    const result3 = await dbClient.query(query3, values3);
+
+    const resulting = result3.rows[0];
+
+    await dbClient.query("COMMIT");
+
+    return {
+      resulting,
+      now_balance,
+    };
   } catch (error) {
-    console.error(error.message);
+    await dbClient.query("ROLLBACK");
+
+    console.error("Deposit failed:", error.message);
+
     throw error;
+  } finally {
+    dbClient.release();
   }
 }
 
