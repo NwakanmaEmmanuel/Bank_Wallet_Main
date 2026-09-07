@@ -189,31 +189,35 @@ export async function getDeposit(user_email, payload) {
 }
 
 // Retrieve details of deposits associated with a specific account.
+// Retrieve details of deposits associated with a specific account.
 export async function getDepositsOnAccount(user_email, payload) {
   const { value, error } = getDepositsOnAccountSchema.validate(payload);
+
   if (error) {
-    console.log(error);
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { account_number } = value;
+
   try {
     const query = `
       SELECT *
       FROM deposits
       WHERE account_number = $1
+        AND user_email = $2
     `;
-    const values = [account_number];
-    const result = await client.query(query, values);
-    if (!result.rows[0]) {
-      return false;
+
+    const values = [account_number, user_email];
+
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      throw new AppError("No deposit found", 404);
     }
-    if (result.rows[0].user_email !== user_email) {
-      console.log("You are not allowed to carry out this action");
-      return "You are not allowed to carry out this action";
-    }
+
     return result.rows;
   } catch (error) {
-    console.error(err.message);
-    throw err;
+    console.error(error.message);
+    throw error;
   }
 }

@@ -52,32 +52,20 @@ export async function getADeposit(req, res, next) {
 }
 
 // Get deposits associated with a user's account
-export async function getDepositsOnAnAccount(req, res) {
+// Get deposits associated with a user's account
+export async function getDepositsOnAnAccount(req, res, next) {
   try {
     const user_email = req.user_email;
+
     const data = await getDepositsOnAccount(user_email, req.body);
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Error Invalid Request" });
-    }
-    if (!data) {
-      logger.error("No deposit found");
-      return res.status(404).json({ error: "No deposit found" });
-    }
-    if (data === "You are not allowed to carry out this action") {
-      logger.error("You are not allowed to carry out this action");
-      return res
-        .status(401)
-        .json({ error: "You are not allowed to carry out this action" });
-    }
+
     logger.info("Deposit details", data);
-    return res.status(201).json({
+
+    return res.status(200).json({
       message: "Deposit details",
       details: data,
     });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
