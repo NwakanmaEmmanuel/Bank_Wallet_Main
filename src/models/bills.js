@@ -1,4 +1,5 @@
-import client from "../config/db.js";
+import pool from "../config/db.js";
+import { AppError } from "../utils/AppError.js";
 import { payBillSchema } from "../validation/Schemas.js";
 import { getBillSchema } from "../validation/Schemas.js";
 import { getBillsOnAccountSchema } from "../validation/Schemas.js";
@@ -43,10 +44,11 @@ async function updateAccountBalance(account_number, amount) {
 // Make a bill payment
 export async function makeBillPayment(user_email, payload) {
   const { error, value } = payBillSchema.validate(payload);
+
   if (error) {
-    console.log(error);
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const {
     account_number,
     bill_type,
@@ -55,73 +57,150 @@ export async function makeBillPayment(user_email, payload) {
     currency_code,
     description,
   } = value;
+
   if (
     bill_type !== "airtime" &&
     bill_type !== "betting" &&
     bill_type !== "electricity"
   ) {
-    return "We currently do not support this bill type at the moment";
+    throw new AppError(
+      "We currently do not support this bill type at the moment",
+      400
+    );
   }
+
+  const dbClient = await pool.connect();
+
   try {
-    const account_balance = await getAccountBalance(account_number);
-    if (!account_balance) {
-      console.log("You are not allowed to carry out this action");
-      return "You are not allowed to carry out this action";
+    await dbClient.query("BEGIN");
+
+    // Get sender account
+    const senderQuery = `
+      SELECT *
+      FROM account
+      WHERE account_number = $1
+        AND user_email = $2
+    `;
+
+    const senderValues = [account_number, user_email];
+
+    const senderResult = await dbClient.query(
+      senderQuery,
+      senderValues
+    );
+
+    if (!senderResult.rows[0]) {
+      throw new AppError(
+        "You are not allowed to carry out this action",
+        403
+      );
     }
 
-    if (account_balance < amount) {
-      console.log("Insufficient funds");
-      return "Insufficient funds";
-    }
-    const new_balance_sender = account_balance - amount;
+    const senderBalance = parseFloat(
+      senderResult.rows[0].account_balance
+    );
 
-    const receiver = await getReceiverAccountBalance(bill_account_number);
-    if (!receiver) {
-      return "No account associated with provided account number";
+    const senderCurrency = senderResult.rows[0].currency_code;
+
+    if (senderBalance < amount) {
+      throw new AppError("Insufficient funds", 400);
     }
-    const receiver_balance = receiver.balance;
-    const bill_receiver_currency = receiver.currency;
-    console.log(`reciever account correct, balance: ${receiver_balance}`);
-    if (currency_code !== bill_receiver_currency) {
+
+    // Get receiver account
+    const receiverQuery = `
+      SELECT *
+      FROM account
+      WHERE account_number = $1
+    `;
+
+    const receiverResult = await dbClient.query(
+      receiverQuery,
+      [bill_account_number]
+    );
+
+    if (!receiverResult.rows[0]) {
+      throw new AppError(
+        "No account associated with provided account number",
+        404
+      );
+    }
+
+    const receiverBalance = parseFloat(
+      receiverResult.rows[0].account_balance
+    );
+
+    const receiverCurrency = receiverResult.rows[0].currency_code;
+
+    let receiverAmount;
+
+    if (currency_code !== receiverCurrency) {
       const data = await currencyConverter(
-        bill_receiver_currency,
+        receiverCurrency,
         currency_code,
         amount
       );
-      const converted_amount = data.result;
-      const new_balance_receiver = receiver_balance + converted_amount;
 
-      const result3 = await updateAccountBalance(
-        account_number,
-        new_balance_sender
-      );
-      console.log(result3);
-      const result4 = await updateAccountBalance(
-        bill_account_number,
-        new_balance_receiver
-      );
-      console.log(result4);
+      receiverAmount = data.result;
     } else {
-      const new_balance_receiver = receiver_balance + amount;
-
-      const result3 = await updateAccountBalance(
-        account_number,
-        new_balance_sender
-      );
-      console.log(result3);
-      const result4 = await updateAccountBalance(
-        bill_account_number,
-        new_balance_receiver
-      );
-      console.log(result4);
+      receiverAmount = amount;
     }
 
-    const query5 = `
-    INSERT INTO bills (user_email, bill_type, description, source_account_number, currency_code, amount, bill_account_number )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING *
+    const newSenderBalance = senderBalance - amount;
+    const newReceiverBalance = receiverBalance + receiverAmount;
+
+    // Update sender
+    const updateSenderQuery = `
+      UPDATE account
+      SET account_balance = $1
+      WHERE account_number = $2
+        AND currency_code = $3
+      RETURNING *
     `;
-    const values5 = [
+
+    const senderUpdateResult = await dbClient.query(
+      updateSenderQuery,
+      [
+        newSenderBalance.toFixed(2),
+        account_number,
+        senderCurrency,
+      ]
+    );
+
+    // Update receiver
+    const updateReceiverQuery = `
+      UPDATE account
+      SET account_balance = $1
+      WHERE account_number = $2
+        AND currency_code = $3
+      RETURNING *
+    `;
+
+    const receiverUpdateResult = await dbClient.query(
+      updateReceiverQuery,
+      [
+        newReceiverBalance.toFixed(2),
+        bill_account_number,
+        receiverCurrency,
+      ]
+    );
+
+    // Record bill payment
+    const billQuery = `
+      INSERT INTO bills
+      (
+        user_email,
+        bill_type,
+        description,
+        source_account_number,
+        currency_code,
+        amount,
+        bill_account_number
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
+
+    const billValues = [
       user_email,
       bill_type,
       description,
@@ -130,13 +209,23 @@ export async function makeBillPayment(user_email, payload) {
       amount,
       bill_account_number,
     ];
-    const result5 = await client.query(query5, values5);
-    console.log(result5.rows[0]);
-    console.log("Bill payment successful");
-    return result5.rows[0];
-  } catch (err) {
-    console.error(err.message);
-    throw err;
+
+    const billResult = await dbClient.query(
+      billQuery,
+      billValues
+    );
+
+    await dbClient.query("COMMIT");
+
+    return billResult.rows[0];
+  } catch (error) {
+    await dbClient.query("ROLLBACK");
+
+    console.error("Bill payment failed:", error.message);
+
+    throw error;
+  } finally {
+    dbClient.release();
   }
 }
 
