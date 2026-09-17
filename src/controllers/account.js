@@ -7,128 +7,120 @@ import {
 } from "../models/account.js";
 import logger from "../config/logger.js";
 
-// Create a default account for the user.
-export async function createADefaultAccount(req, res) {
+export async function createADefaultAccount(req, res, next) {
   try {
     const user_email = req.user_email;
+
     const data = await createDefaultAccount(user_email);
-    const { account_details } = data;
+
     if (!data) {
-      logger.error("User Already Has An Account In Our Base Currency");
-      return res
-        .status(409)
-        .json({ error: "User Already Has An Account In Our Base Currency" });
+      return res.status(409).json({
+        error: "User already has an account in our base currency",
+      });
     }
-    logger.info("ACCOUNT CREATED SUCESSFULLY", account_details);
+
+    logger.info("Account created successfully", data.account_details);
+
     return res.status(201).json({
-      message: "ACCOUNT CREATED SUCESSFULLY",
-      account_details: account_details,
+      message: "Account created successfully",
+      account_details: data.account_details,
     });
-    l;
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-// Create an account in a specific currency for the user.
-export async function createAnAccountInACurrency(req, res) {
+export async function createAnAccountInACurrency(req, res, next) {
   try {
     const user_email = req.user_email;
     const currency = req.body.currency_code;
+
     const data = await createAccountInACurrency(user_email, currency);
-    const { account_details } = data;
+
     if (!data) {
-      logger.error("User Already Has An Account In This Currency");
-      return res
-        .status(409)
-        .json({ error: "User Already Has An Account In This Currency" });
+      return res.status(409).json({
+        error: "User already has an account in this currency",
+      });
     }
-    logger.info("ACCOUNT CREATED SUCESSFULLY", account_details);
+
+    logger.info("Account created successfully", data.account_details);
+
     return res.status(201).json({
-      message: "ACCOUNT CREATED SUCESSFULLY",
-      account_details: account_details,
+      message: "Account created successfully",
+      account_details: data.account_details,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-// Retrieve all accounts associated with the user.
-export async function getTheAccounts(req, res) {
+export async function getTheAccounts(req, res, next) {
   try {
     const user_email = req.user_email;
+
     const data = await getAccounts(user_email);
+
     if (!data) {
-      logger.error("No accounts associated with this user");
-      return res
-        .status(404)
-        .json({ error: "No accounts associated with this user" });
+      return res.status(404).json({
+        error: "No accounts associated with this user",
+      });
     }
-    logger.info("USER ACCOUNTS", data);
-    return res.status(201).json({
-      message: "USER ACCOUNTS",
+
+    logger.info("User accounts retrieved", data);
+
+    return res.status(200).json({
+      message: "User accounts",
       accounts: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-// Retrieve details of a specific user account.
-export async function getASpecificAccount(req, res) {
+export async function getASpecificAccount(req, res, next) {
   try {
     const user_email = req.user_email;
     const account_number = req.body.account_number;
+
     const data = await getSpecificAccount(user_email, account_number);
+
     if (!data) {
-      logger.error(`No account with account_number ${account_number} exists`);
       return res.status(404).json({
-        error: `No account with account_number ${account_number} exists`,
+        error: `No account with account number ${account_number} exists`,
       });
     }
-    logger.info("ACCOUNT", data);
-    return res.status(201).json({
-      message: "ACCOUNT",
-      accounts: data,
+
+    logger.info("Account retrieved", data);
+
+    return res.status(200).json({
+      message: "Account",
+      account: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-// Delete a user's account.
-export async function deleteAnAccount(req, res) {
+export async function deleteAnAccount(req, res, next) {
   try {
     const user_email = req.user_email;
     const account_number = req.body.account_number;
+
     const data = await deleteAccount(user_email, account_number);
+
     if (!data) {
-      logger.error(`No account with account_number ${account_number} exists`);
       return res.status(404).json({
-        error: `No account with account_number ${account_number} exists`,
+        error: `No account with account number ${account_number} exists`,
       });
     }
-    logger.info("ACCOUNT DELETED SUCCESSFULLY", data);
-    return res.status(201).json({
-      message: "ACCOUNT DELETED SUCCESSFULLY",
-      accounts: data,
+
+    logger.info("Account deleted successfully", data);
+
+    return res.status(200).json({
+      message: "Account deleted successfully",
+      account: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
