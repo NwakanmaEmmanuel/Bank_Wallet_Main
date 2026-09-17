@@ -232,64 +232,66 @@ export async function makeBillPayment(user_email, payload) {
 // Make a bill payment and update account balances accordingly.
 export async function getBillPayment(user_email, payload) {
   const { value, error } = getBillSchema.validate(payload);
+
   if (error) {
-    console.log(error);
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { account_number, bill_id } = value;
+
   try {
     const query = `
-    SELECT *
-    FROM bills
-    WHERE bill_id = $1 AND source_account_number = $2
-  `;
-    const values = [bill_id, account_number];
-    const result = await client.query(query, values);
-    console.log(result.rows);
+      SELECT *
+      FROM bills
+      WHERE bill_id = $1
+        AND source_account_number = $2
+        AND user_email = $3
+    `;
+
+    const values = [bill_id, account_number, user_email];
+
+    const result = await pool.query(query, values);
+
     if (!result.rows[0]) {
-      console.log("No bill found");
-      return false;
-    }
-    if (result.rows[0].user_email !== user_email) {
-      console.log("You are not allowed to carry out this action");
-      return "You are not allowed to carry out this action";
+      throw new AppError("No bill found", 404);
     }
 
-    console.log(result.rows[0]);
     return result.rows[0];
   } catch (error) {
-    console.error(err.message);
-    throw err;
+    console.error(error.message);
+    throw error;
   }
 }
 
 // Retrieve bill details associated with a specific account.
 export async function getBillsOnAccount(user_email, payload) {
   const { value, error } = getBillsOnAccountSchema.validate(payload);
+
   if (error) {
-    console.log(error);
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { account_number } = value;
+
   try {
     const query = `
       SELECT *
       FROM bills
-      WHERE source_account_number = $1 AND user_email = $2
+      WHERE source_account_number = $1
+        AND user_email = $2
     `;
+
     const values = [account_number, user_email];
-    const result = await client.query(query, values);
+
+    const result = await pool.query(query, values);
+
     if (!result.rows[0]) {
-      return "No Bills Associated with this account";
-    }
-    if (result.rows[0].user_email !== user_email) {
-      console.log("You are not allowed to carry out this action");
-      return "You are not allowed to carry out this action";
+      throw new AppError("No bills found for this account", 404);
     }
 
     return result.rows;
   } catch (error) {
-    console.error(err.message);
-    throw err;
+    console.error(error.message);
+    throw error;
   }
 }
