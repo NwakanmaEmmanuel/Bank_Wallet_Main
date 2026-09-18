@@ -3,7 +3,8 @@
 // A default/ super admin can make other users admins.
 
 // Admins can close down user accounts, but would send a warning email to the user before doing so..
-import client from "../config/db.js";
+import { AppError } from "../utils/AppError.js";
+import pool from "../config/db.js";
 import { hashPassword } from "../utils/hash.js";
 import { createAdminSchema, currencySchema } from "../validation/Schemas.js";
 import { loginSchema } from "../validation/Schemas.js";
@@ -17,24 +18,29 @@ import { verifyAdminToken } from "../utils/jwt.js";
 
 export async function checkIfAdminExists(email) {
   const query = `
-    SELECT COUNT(*) as count
+    SELECT COUNT(*) AS count
     FROM admin
     WHERE admin_email = $1
-      `;
+  `;
+
   const values = [email];
-  const result = await client.query(query, values);
-  return +result.rows[0].count;
+
+  const result = await pool.query(query, values);
+
+  return Number(result.rows[0].count);
 }
 
 async function checkAdminEmail(email) {
   const query = `
-    SELECT * 
+    SELECT *
     FROM admin
     WHERE admin_email = $1
-    `;
+  `;
 
   const values = [email];
-  const result = await client.query(query, values);
+
+  const result = await pool.query(query, values);
+
   return result.rows[0];
 }
 
@@ -45,54 +51,79 @@ async function checkIfCurrencyExists(currency_code) {
     WHERE currency_code = $1
       `;
   const values = [currency_code];
-  const result = await client.query(query, values);
+  const result = await pool.query(query, values);
   return +result.rows[0].count;
 }
 
 // An admin would create an admin account.
 export async function createAdminAccount(payload) {
   const { error, value } = createAdminSchema.validate(payload);
+
   if (error) {
-    console.log(error);
-    return false;
+    throw new AppError("Invalid Request", 400);
   }
+
   const { first_name, last_name, email, password, token } = value;
-  console.log(1);
+
   try {
     const tokenVerified = await verifyAdminToken(token);
-    console.log(tokenVerified);
+
     if (!tokenVerified) {
-      return "Invalid token";
+      throw new AppError("Invalid admin token", 401);
     }
+
     const userExists = await checkIfAdminExists(email);
+
     if (userExists) {
-      console.log("User exists");
-      return "An admin with this email already exists";
+      throw new AppError(
+        "An admin with this email already exists",
+        409
+      );
     }
-    console.log(2);
+
     const hashedPassword = await hashPassword(password);
-    console.log(3);
+
     const query = `
-        INSERT INTO admin (first_name, last_name, admin_email, admin_password) 
-        VALUES ($1, $2, $3, $4) 
-        RETURNING *
-        `;
-    const values = [first_name, last_name, email, hashedPassword];
+      INSERT INTO admin (
+        first_name,
+        last_name,
+        admin_email,
+        admin_password
+      )
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `;
+
+    const values = [
+      first_name,
+      last_name,
+      email,
+      hashedPassword,
+    ];
+
     const result = await client.query(query, values);
-    console.log(4);
+
     const details = result.rows[0];
+
     const userData = {
       first_name: details.first_name,
       last_name: details.last_name,
       admin_email: details.admin_email,
     };
-    const newToken = await generateToken(value);
-    console.log(result.rows);
-    console.log("Registration Successful, user token generated");
+
+    const newToken = await generateToken({
+      first_name,
+      last_name,
+      email,
+    });
+
     await sendAdminRegisterEmail(email);
-    return { userData, newToken };
+
+    return {
+      userData,
+      newToken,
+    };
   } catch (error) {
-    console.log(error.message);
     throw error;
   }
 }
