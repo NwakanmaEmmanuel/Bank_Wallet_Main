@@ -46,7 +46,6 @@ export async function sendAnAdminToken(req, res) {
         .json({ error: "You are not allowed to carry out this action" });
     }
     logger.info("ADMIN TOKEN HAS BEEN SENT");
-    //token
     return res.status(201).json({
       message: "ADMIN TOKEN HAS BEEN SENT",
     });

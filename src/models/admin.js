@@ -101,7 +101,7 @@ export async function createAdminAccount(payload) {
       hashedPassword,
     ];
 
-    const result = await client.query(query, values);
+    const result = await pool.query(query, values);
 
     const details = result.rows[0];
 
@@ -117,7 +117,7 @@ export async function createAdminAccount(payload) {
       email,
     });
 
-    await sendAdminRegisterEmail(email);
+    // await sendAdminRegisterEmail(email);
 
     return {
       userData,
@@ -131,35 +131,44 @@ export async function createAdminAccount(payload) {
 // Authenticate an admin login and generate an authentication token.
 export async function adminLogin(payload) {
   const { error, value } = loginSchema.validate(payload);
+
   if (error) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { email, password } = value;
+
   try {
-    const adminExists = await checkIfAdminExists(email);
-    if (!adminExists) {
-      console.log("Admin doesn't exist");
-      return "Admin doesn't exist";
-    }
     const query = `
-        SELECT admin_password
-        FROM admin
-        WHERE admin_email = $1
-        `;
-    const values = [email];
-    const result = await client.query(query, values);
-    const dbPassword = result.rows[0].admin_password;
-    const isMatch = await passwordMatches(password, dbPassword);
-    if (!isMatch) {
-      console.log("passwords don't match");
-      return false;
+      SELECT *
+      FROM admin
+      WHERE admin_email = $1
+    `;
+
+    const result = await pool.query(query, [email]);
+
+    if (!result.rows[0]) {
+      throw new AppError("Invalid email or password", 401);
     }
-    const token = await generateToken(value);
-    console.log("Login Successful, user token generated");
-    console.log(token);
+
+    const admin = result.rows[0];
+
+    const isMatch = await passwordMatches(
+      password,
+      admin.admin_password
+    );
+
+    if (!isMatch) {
+      throw new AppError("Invalid email or password", 401);
+    }
+
+    const token = await generateToken({
+      admin_id: admin.admin_id,
+      email: admin.admin_email,
+    });
+
     return token;
   } catch (error) {
-    console.log(error.message);
     throw error;
   }
 }
@@ -167,45 +176,43 @@ export async function adminLogin(payload) {
 // Create a new currency account
 export async function createCurrency(admin_email, payload) {
   const { error, value } = currencySchema.validate(payload);
+
   if (error) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { currency_code } = value;
-  console.log(admin_email);
 
   try {
     const adminConfirmed = await checkAdminEmail(admin_email);
+
     if (!adminConfirmed) {
-      console.log("You are not allowed to carry this action");
-      return "You are not allowed to carry this action";
+      throw new AppError("You are not allowed to carry out this action", 403);
     }
 
     const currencyExists = await checkIfCurrencyExists(currency_code);
+
     if (currencyExists) {
-      console.log("currency exists already");
-      return "currency exists already";
+      throw new AppError("Currency already exists", 409);
     }
 
     const { currencies } = await getCurrencyList();
-    const data = await isSupportedCurrency(currency_code, currencies);
-    if (!data) {
-      console.log("Invalid or Unsupported currency");
-      return "Invalid or Unsupported currency";
+    const isSupported = isSupportedCurrency(currency_code, currencies);
+
+    if (!isSupported) {
+      throw new AppError("Invalid or unsupported currency", 400);
     }
-    console.log(data);
 
     const query = `
-    INSERT INTO currencies(currency_code)
-    VALUES ($1)
-    RETURNING *
+      INSERT INTO currencies (currency_code)
+      VALUES ($1)
+      RETURNING *
     `;
 
-    const values = [currency_code];
-    const result = await client.query(query, values);
-    console.log(result.rows);
+    const result = await pool.query(query, [currency_code]);
+
     return result.rows[0];
   } catch (error) {
-    console.log(error.message);
     throw error;
   }
 }
@@ -231,35 +238,34 @@ function getUsersDetails(rows) {
 // Admins can access users with the same currency, excluding sensitive details.
 export async function getUserAccountWithSameCurrency(admin_email, payload) {
   const { error, value } = currencySchema.validate(payload);
+
   if (error) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { currency_code } = value;
+
   try {
     const adminConfirmed = await checkAdminEmail(admin_email);
+
     if (!adminConfirmed) {
-      console.log("You are not allowed to carry this action");
-      return "You are not allowed to carry this action";
+      throw new AppError("You are not allowed to carry out this action", 403);
     }
+
     const query = `
-    SELECT *
-    FROM account
-    WHERE currency_code = $1
+      SELECT *
+      FROM account
+      WHERE currency_code = $1
     `;
-    const values = [currency_code];
-    const result = await client.query(query, values);
-    console.log(result.rows[0]);
+
+    const result = await pool.query(query, [currency_code]);
+
     if (!result.rows[0]) {
-      console.log("No Account with specified currency available");
-      return "No Account with specified currency available";
+      throw new AppError("No accounts with specified currency found", 404);
     }
 
-    const userDetails = getUsersDetails(result.rows);
-    console.log(userDetails);
-
-    return userDetails;
+    return getUsersDetails(result.rows);
   } catch (error) {
-    console.log(error.message);
     throw error;
   }
 }
@@ -267,27 +273,32 @@ export async function getUserAccountWithSameCurrency(admin_email, payload) {
 // Check a user's account
 export async function getUserAccount(admin_email, payload) {
   const { error, value } = accountSchema.validate(payload);
+
   if (error) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { account_number } = value;
+
   try {
     const adminConfirmed = await checkAdminEmail(admin_email);
+
     if (!adminConfirmed) {
-      console.log("You are not allowed to carry this action");
-      return "You are not allowed to carry this action";
+      throw new AppError("You are not allowed to carry out this action", 403);
     }
+
     const query = `
-    SELECT *
-    FROM account
-    WHERE account_number = $1
+      SELECT *
+      FROM account
+      WHERE account_number = $1
     `;
-    const values = [account_number];
-    const result = await client.query(query, values);
+
+    const result = await pool.query(query, [account_number]);
+
     if (!result.rows[0]) {
-      console.log("No Account with account number available");
-      return "No Account with account number available";
+      throw new AppError("No account found with that account number", 404);
     }
+
     const details = {
       account_id: result.rows[0].account_id,
       user_email: result.rows[0].user_email,
@@ -298,7 +309,6 @@ export async function getUserAccount(admin_email, payload) {
 
     return details;
   } catch (error) {
-    console.log(error.message);
     throw error;
   }
 }

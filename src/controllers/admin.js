@@ -6,74 +6,46 @@ import { getUserAccountWithSameCurrency } from "../models/admin.js";
 import { getUserAccount } from "../models/admin.js";
 
 //Create admin Account
-export async function createAnAdminAccount(req, res) {
+export async function createAnAdminAccount(req, res, next) {
   try {
     const data = await createAdminAccount(req.body);
-    const { userData, newToken } = data;
-    if (data === "An admin with this email already exists") {
-      logger.error("An admin with this email already exists");
-      return res
-        .status(409)
-        .json({ error: "An admin with this email already exists" });
-    }
+
     if (!data) {
-      logger.error("Invalid Request");
       return res.status(400).json({ error: "Invalid Request" });
     }
-    if (data === "Invalid token") {
-      logger.error("Invalid token");
-      return res.status(401).json({ error: "Invalid token" });
-    }
-    logger.info("ADMIN REGISTRATION SUCESSFULL");
+
+    const { userData, newToken } = data;
+
+    logger.info("Admin registration successful");
+
     res.cookie("token", newToken);
+
     return res.status(201).json({
-      message: "ADMIN REGISTRATION SUCESSFULL",
-      Your_Details: userData,
+      message: "Admin registration successful",
+      your_details: userData,
       token: newToken,
     });
   } catch (error) {
-    if (
-      error.message.includes("jwt expired") ||
-      error.message.includes("invalid token")
-    ) {
-      logger.error("UNAUTHORIZED");
-      return res.status(401).json({ error: "UNAUTHORIZED" });
-    }
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
-
 // Log in an admin user and set a cookie with the user's token
-export async function logAdmin(req, res) {
+export async function logAdmin(req, res, next) {
   try {
-    const data = await adminLogin(req.body);
+    const token = await adminLogin(req.body);
 
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (data === "Admin doesn't exist") {
-      logger.error("Invalid Email/ Password");
-      return res.status(401).json({ error: "Invalid Email/ Password" });
-    }
-    if (!data) {
-      logger.error("Invalid Email/ Password");
-      return res.status(401).json({ error: "Invalid Email/ Password" });
-    }
-    logger.info("LOGIN SUCESSFUL", data);
-    res.cookie("token", data, { httpOnly: true });
-    return res.status(201).json({
-      message: "LOGIN SUCESSFUL",
-      token: data,
+    logger.info("Admin login successful");
+
+    res.cookie("token", token, {
+      httpOnly: true,
+    });
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 

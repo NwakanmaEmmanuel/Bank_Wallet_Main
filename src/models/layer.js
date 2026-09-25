@@ -10,7 +10,7 @@ export async function currencyConverter(
   sender_currency,
   amount
 ) {
-  const apiKey = "A3cdWZEWju4CO0f1RnblKW9LRKirtb62";
+  const apiKey = process.env.APIKEY;
 
   // Construct the URL with the actual values
   const url = `https://api.apilayer.com/exchangerates_data/convert?to=${receiver_currency}&from=${sender_currency}&amount=${amount}`;
