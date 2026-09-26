@@ -15,6 +15,7 @@ import { sendAdminRegisterEmail } from "../utils/nodeMailer.js";
 import { getCurrencyList } from "./layer.js";
 import { isSupportedCurrency } from "./layer.js";
 import { verifyAdminToken } from "../utils/jwt.js";
+import { generateAdminToken } from "../utils/jwt.js";
 
 export async function checkIfAdminExists(email) {
   const query = `
@@ -162,7 +163,7 @@ export async function adminLogin(payload) {
       throw new AppError("Invalid email or password", 401);
     }
 
-    const token = await generateToken({
+    const token = await generateAdminToken({
       admin_id: admin.admin_id,
       email: admin.admin_email,
     });

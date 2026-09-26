@@ -105,3 +105,7 @@
 {"level":"error","message":"Request failed with status code 401","timestamp":"2026-09-25"}
 {"level":"error","message":"Request failed with status code 401","timestamp":"2026-09-25"}
 {"level":"error","message":"client is not defined","timestamp":"2026-09-25"}
+{"level":"error","message":"You are not allowed to carry out this action","timestamp":"2026-09-26"}
+{"level":"error","message":"You are not allowed to carry out this action","timestamp":"2026-09-26"}
+{"level":"error","message":"You are not allowed to carry out this action","timestamp":"2026-09-26"}
+{"level":"error","message":"AppError: Currency already exists\n    at createCurrency (file:///C:/Users/Admin/Desktop/Bank-Wallet-MAIN/src/models/admin.js:197:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async createACurrency (file:///C:/Users/Admin/Desktop/Bank-Wallet-MAIN/src/controllers/admin.js:57:18)","timestamp":"2026-09-26"}

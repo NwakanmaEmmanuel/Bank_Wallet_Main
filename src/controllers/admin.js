@@ -50,108 +50,55 @@ export async function logAdmin(req, res, next) {
 }
 
 // Create a new currency with specific user details
-export async function createACurrency(req, res) {
+export async function createACurrency(req, res, next) {
   try {
-    const user_email = req.user_email;
-    const data = await createCurrency(user_email, req.body);
+    const admin_email = req.admin_email;
 
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (data === "You are not allowed to carry this action") {
-      logger.error("You are not allowed to carry this action");
-      return res
-        .status(401)
-        .json({ error: "You are not allowed to carry this action" });
-    }
-    if (data === "currency exists already") {
-      logger.error("Currency exists already");
-      return res.status(409).json({ error: "Currency exists already" });
-    }
-    if (data === "Invalid or Unsupported currency") {
-      logger.error("Invalid or Unsupported currency");
-      return res.status(400).json({ error: "Invalid or Unsupported currency" });
-    }
-    logger.info("CURRENCY CREATED SUCESSFULLY", data);
+    const data = await createCurrency(admin_email, req.body);
+
+    logger.info("Currency created successfully", data);
+
     return res.status(201).json({
-      message: "CURRENCY CREATED SUCESSFULLY",
+      message: "Currency created successfully",
       details: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
 // Retrieve user accounts with the same currency as the user's
-export async function getTheUserAccountsWithSameCurrency(req, res) {
+export async function getTheUserAccountsWithSameCurrency(req, res, next) {
   try {
-    const user_email = req.user_email;
-    const data = await getUserAccountWithSameCurrency(user_email, req.body);
+    const admin_email = req.admin_email;
 
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (data === "You are not allowed to carry this action") {
-      logger.error("You are not allowed to carry this action");
-      return res
-        .status(401)
-        .json({ error: "You are not allowed to carry this action" });
-    }
-    if (data === "No Account with specified currency available") {
-      logger.error("No Account with specified currency available");
-      return res
-        .status(404)
-        .json({ error: "No Account with specified currency available" });
-    }
-    logger.info("ACCOUNTS", data);
-    return res.status(201).json({
-      message: "ACCOUNTS",
+    const data = await getUserAccountWithSameCurrency(admin_email, req.body);
+
+    logger.info("Accounts retrieved", data);
+
+    return res.status(200).json({
+      message: "Accounts",
       details: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
 // Get details of a specific user's account based on account number
-export async function getAUser(req, res) {
+export async function getAUser(req, res, next) {
   try {
-    const user_email = req.user_email;
-    const data = await getUserAccount(user_email, req.body);
+    const admin_email = req.admin_email;
 
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (data === "You are not allowed to carry this action") {
-      logger.error("You are not allowed to carry this action");
-      return res
-        .status(401)
-        .json({ error: "You are not allowed to carry this action" });
-    }
-    if (data === "No Account with account number available") {
-      logger.error("No Account with account number available");
-      return res
-        .status(404)
-        .json({ error: "No Account with account number available" });
-    }
-    logger.info("ACCOUNT", data);
-    return res.status(201).json({
-      message: "ACCOUNT",
+    const data = await getUserAccount(admin_email, req.body);
+
+    logger.info("Account retrieved", data);
+
+    return res.status(200).json({
+      message: "Account",
       details: data,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
