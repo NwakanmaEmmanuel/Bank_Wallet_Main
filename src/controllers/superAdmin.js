@@ -2,57 +2,35 @@ import { superAdminLogin } from "../models/superAdmin.js";
 import { sendAdminToken } from "../models/superAdmin.js";
 import logger from "../config/logger.js";
 
-export async function logSuperAdmin(req, res) {
+export async function logSuperAdmin(req, res, next) {
   try {
-    const data = await superAdminLogin(req.body);
+    const token = await superAdminLogin(req.body);
 
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (data === "Admin doesn't exist") {
-      logger.error("Admin doesn't exist");
-      return res.status(401).json({ error: "Invalid Email/ Password" });
-    }
-    if (!data) {
-      logger.error("Invalid Email/ Password");
-      return res.status(401).json({ error: "Invalid Email/ Password" });
-    }
-    logger.info("LOGIN SUCESSFUL", data);
-    res.cookie("token", data, { httpOnly: true });
-    return res.status(201).json({
-      message: "LOGIN SUCESSFUL",
-      token: data,
+    logger.info("Super admin login successful");
+
+    res.cookie("token", token, { httpOnly: true });
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
     });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-export async function sendAnAdminToken(req, res) {
+export async function sendAnAdminToken(req, res, next) {
   try {
-    const admin_email = req.user_email;
-    const data = await sendAdminToken(admin_email, req.body);
-    if (!data) {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (data === "Admin does not exist") {
-      logger.error("Admin does not exist");
-      return res
-        .status(404)
-        .json({ error: "You are not allowed to carry out this action" });
-    }
-    logger.info("ADMIN TOKEN HAS BEEN SENT");
-    return res.status(201).json({
-      message: "ADMIN TOKEN HAS BEEN SENT",
+    const admin_email = req.admin_email;
+
+    await sendAdminToken(admin_email, req.body);
+
+    logger.info("Admin token sent");
+
+    return res.status(200).json({
+      message: "Admin token has been sent",
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }

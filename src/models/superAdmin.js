@@ -1,17 +1,16 @@
 import { checkIfAdminExists } from "./admin.js";
-import client from "../config/db.js";
+import pool from "../config/db.js";
 import { passwordMatches } from "../utils/hash.js";
-import { generateToken } from "../utils/jwt.js";
 import { generateAdminToken } from "../utils/jwt.js";
 import { loginSchema } from "../validation/Schemas.js";
-import { createAdminSchema } from "../validation/Schemas.js";
 import { sendAdminRegisterTokenEmail } from "../utils/nodeMailer.js";
+import { AppError } from "../utils/AppError.js";
 
 export async function superAdminLogin(payload) {
   const { error, value } = loginSchema.validate(payload);
 
   if (error) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
 
   const { email, password } = value;
@@ -20,7 +19,7 @@ export async function superAdminLogin(payload) {
     const adminExists = await checkIfAdminExists(email);
 
     if (!adminExists) {
-      return "Admin doesn't exist";
+      throw new AppError("Invalid email or password", 401);
     }
 
     const query = `
@@ -29,21 +28,20 @@ export async function superAdminLogin(payload) {
       WHERE admin_email = $1
     `;
 
-    const result = await client.query(query, [email]);
+    const result = await pool.query(query, [email]);
 
     const dbPassword = result.rows[0].admin_password;
 
     const isMatch = await passwordMatches(password, dbPassword);
 
     if (!isMatch) {
-      return false;
+      throw new AppError("Invalid email or password", 401);
     }
 
-    const token = await generateToken({ email });
+    const token = await generateAdminToken({ email });
 
     return token;
   } catch (error) {
-    console.log(error.message);
     throw error;
   }
 }
@@ -52,21 +50,21 @@ export async function sendAdminToken(super_admin_email, payload) {
   const { first_name, last_name, email } = payload;
 
   if (!first_name || !last_name || !email) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
 
   try {
     const adminExists = await checkIfAdminExists(super_admin_email);
 
     if (!adminExists) {
-      return "Admin does not exist";
+      throw new AppError("You are not allowed to carry out this action", 403);
     }
 
     const token = await generateAdminToken({ first_name, last_name, email });
     console.log("ADMIN TOKEN:", token);
     await sendAdminRegisterTokenEmail(email, token);
 
-    return "DONE";
+    return true;
   } catch (error) {
     throw error;
   }
