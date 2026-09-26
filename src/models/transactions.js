@@ -6,37 +6,56 @@
 /accounts/:account_id/transactions/download
 */
 
-import client from "../config/db.js";
+import pool from "../config/db.js";
 
 export async function getAllTransactions(user_email) {
   try {
-    const query = `
-          SELECT users.first_name, bills.bill_id, bills.bill_type, bills.source_account_number,
-          bills.amount, bills.currency_code, bills.description, bills.bill_account_number, bills.bill_date,
-          deposits.deposit_id, deposits.account_number, deposits.amount, deposits.currency_code, 
-          deposits.description, deposits.deposit_date,
-          transfers.transfer_id, transfers.account_number, transfers.third_party_acct_no, transfers.amount,
-          transfers.description, transfers.transfer_date,
-          withdrawals.withdrawal_id, withdrawals.account_number, 
-          withdrawals.amount, withdrawals.currency_code, withdrawals.description, withdrawals.withdrawal_date
-          FROM users
-          LEFT JOIN bills ON users.user_email = bills.user_email
-          LEFT JOIN deposits ON users.user_email = deposits.user_email
-          LEFT JOIN transfers ON users.user_email = transfers.user_email
-          LEFT JOIN withdrawals ON users.user_email = withdrawals.user_email
-          WHERE users.user_email = $1
-          LIMIT 1
-        `;
-    const values = [user_email];
-    const result = await client.query(query, values);
-    if (!result.rows[0]) {
-      console.log("No transactions found");
+    const deposits = await pool.query(
+      `SELECT 'deposit' AS type, deposit_id AS id, amount, 
+        currency_code, description, deposit_date AS date
+       FROM deposits
+       WHERE user_email = $1`,
+      [user_email]
+    );
+
+    const withdrawals = await pool.query(
+      `SELECT 'withdrawal' AS type, withdrawal_id AS id, amount,
+        currency_code, description, withdrawal_date AS date
+       FROM withdrawals
+       WHERE user_email = $1`,
+      [user_email]
+    );
+
+    const transfers = await pool.query(
+      `SELECT 'transfer' AS type, transfer_id AS id, amount,
+        currency_code, description, transfer_date AS date
+       FROM transfers
+       WHERE user_email = $1`,
+      [user_email]
+    );
+
+    const bills = await pool.query(
+      `SELECT 'bill' AS type, bill_id AS id, amount,
+        currency_code, description, bill_date AS date
+       FROM bills
+       WHERE user_email = $1`,
+      [user_email]
+    );
+
+    const all = [
+      ...deposits.rows,
+      ...withdrawals.rows,
+      ...transfers.rows,
+      ...bills.rows,
+    ];
+
+    if (all.length === 0) {
       return false;
     }
-    console.log(result.rows[0]);
-    return result.rows;
+
+    return all;
   } catch (error) {
     console.error(error.message);
-    throw err;
+    throw error;
   }
 }
