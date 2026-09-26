@@ -7,12 +7,14 @@ dotenv.config();
 export async function sendEmail(recipient, token) {
   console.log(token);
   const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
   const mailOptions = {
     from: process.env.EMAIL_USER  ,
@@ -36,12 +38,14 @@ export async function sendEmail(recipient, token) {
 // Send a registration success email to the recipient
 export async function sendRegisterEmail(recipient) {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
   const mailOptions = {
     from: process.env.EMAIL_USER  ,
@@ -61,12 +65,14 @@ export async function sendRegisterEmail(recipient) {
 
 export async function sendAdminRegisterEmail(recipient) {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
   const mailOptions = {
     from: process.env.EMAIL_USER  ,
@@ -86,12 +92,14 @@ export async function sendAdminRegisterEmail(recipient) {
 
 export async function sendAdminRegisterTokenEmail(recipient, token) {
   const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
   const mailOptions = {
     from: process.env.EMAIL_USER  ,
