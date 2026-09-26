@@ -1,141 +1,153 @@
-import client from "../config/db.js";
-import { hashPassword } from "../utils/hash.js";
-import { passwordMatches } from "../utils/hash.js";
+import pool from "../config/db.js";
+import { hashPassword, passwordMatches } from "../utils/hash.js";
 import { generateToken } from "../utils/jwt.js";
-import { createProfileSchema } from "../validation/Schemas.js";
-import { loginSchema } from "../validation/Schemas.js";
-import { resetSchema } from "../validation/Schemas.js";
-import { sendEmail } from "../utils/nodeMailer.js";
-import { sendRegisterEmail } from "../utils/nodeMailer.js";
+import { createProfileSchema, loginSchema, resetSchema } from "../validation/Schemas.js";
+import { sendEmail, sendRegisterEmail } from "../utils/nodeMailer.js";
+import { AppError } from "../utils/AppError.js";
 
-// Check if a user with the specified email exists in the database.
 async function checkIfUserExists(email) {
   const query = `
-  SELECT COUNT(*) as count
-  FROM users
-  WHERE user_email = $1
-    `;
-  const values = [email];
-  const result = await client.query(query, values);
-  return +result.rows[0].count;
+    SELECT COUNT(*) AS count
+    FROM users
+    WHERE user_email = $1
+  `;
+  const result = await pool.query(query, [email]);
+  return Number(result.rows[0].count);
 }
 
-// Create a user profile and store it in the database.
 export async function createUserProfile(payload) {
   const { error, value } = createProfileSchema.validate(payload);
+
   if (error) {
-    return "Invalid payload";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { first_name, last_name, email, password } = value;
+
   try {
     const userExists = await checkIfUserExists(email);
+
     if (userExists) {
-      return "User exists";
+      throw new AppError("User already exists", 409);
     }
+
     const hashedPassword = await hashPassword(password);
 
     const query = `
-      INSERT INTO users (first_name, last_name, user_email, password) 
-      VALUES ($1, $2, $3, $4) 
+      INSERT INTO users (first_name, last_name, user_email, password)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
     `;
-    const values = [first_name, last_name, email, hashedPassword];
-    const result = await client.query(query, values);
+
+    const result = await pool.query(query, [first_name, last_name, email, hashedPassword]);
+
     const details = result.rows[0];
+
     const userData = {
       first_name: details.first_name,
       last_name: details.last_name,
       user_email: details.user_email,
     };
-    const token = await generateToken(value);
-    sendRegisterEmail(email);
+
+    const token = await generateToken({ email });
+
+    await sendRegisterEmail(email);
+
     return { userData, token };
   } catch (error) {
-    console.error(error.message);
-    throw new Error("User registration failed");
+    throw error;
   }
 }
 
-// Authenticate a user's login and generate an authentication token.
 export async function userLogin(payload) {
   const { error, value } = loginSchema.validate(payload);
+
   if (error) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { email, password } = value;
+
   try {
-    const userExists = await checkIfUserExists(email);
-    if (!userExists) {
-      return "User doesn't exist";
-    }
     const query = `
       SELECT password
       FROM users
       WHERE user_email = $1
     `;
-    const values = [email];
-    const result = await client.query(query, values);
-    const dbPassword = result.rows[0] ? result.rows[0].password : null;
-    if (!dbPassword) {
-      return "Invalid Email/Password";
+
+    const result = await pool.query(query, [email]);
+
+    if (!result.rows[0]) {
+      throw new AppError("Invalid email or password", 401);
     }
+
+    const dbPassword = result.rows[0].password;
+
     const isMatch = await passwordMatches(password, dbPassword);
+
     if (!isMatch) {
-      return "Invalid Email/Password";
+      throw new AppError("Invalid email or password", 401);
     }
-    const token = await generateToken(value);
+
+    const token = await generateToken({ email });
+
     return token;
   } catch (error) {
     throw error;
   }
 }
 
-// Send a reset password link to a user's email.
 export const sendResetLink = async (payload) => {
   const { error, value } = resetSchema.validate(payload);
+
   if (error) {
-    return "Invalid Request";
+    throw new AppError("Invalid Request", 400);
   }
+
   const { email } = value;
 
-  const userExists = await checkIfUserExists(email);
-  if (!userExists) {
-    return "User doesn't exist";
-  }
-
   try {
-    const token = await generateToken(value);
-    const response = sendEmail(email, token);
-    return { response };
+    const userExists = await checkIfUserExists(email);
+
+    if (!userExists) {
+      throw new AppError("User not found", 404);
+    }
+
+    const token = await generateToken({ email });
+
+    await sendEmail(email, token);
+
+    return true;
   } catch (error) {
-    console.error(error);
-    return "Email sending failed";
+    throw error;
   }
 };
 
-// Reset a user's password in the database.
 export async function reset(user_email, userPassword) {
   const { password, confirm_password } = userPassword;
+
   if (password !== confirm_password) {
-    console.log("Passwords don't match");
-    return "Passwords don't match";
+    throw new AppError("Passwords don't match", 400);
   }
-  const hashedPassword = await hashPassword(confirm_password);
+
   try {
-    const query0 = `
+    const hashedPassword = await hashPassword(confirm_password);
+
+    const query = `
       UPDATE users
       SET password = $1
       WHERE user_email = $2
       RETURNING *
     `;
-    const values0 = [hashedPassword, user_email];
-    const result = await client.query(query0, values0);
+
+    const result = await pool.query(query, [hashedPassword, user_email]);
+
     if (result.rowCount === 0) {
-      return "Unable to Update Database";
+      throw new AppError("Unable to update password", 404);
     }
-    return result.rows;
-  } catch (err) {
-    console.error(err.message);
-    throw new Error("Password reset failed");
+
+    return true;
+  } catch (error) {
+    throw error;
   }
 }

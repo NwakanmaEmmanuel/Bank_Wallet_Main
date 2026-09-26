@@ -1,112 +1,73 @@
 import logger from "../config/logger.js";
-import { createUserProfile } from "../models/userAuth.js";
-import { userLogin } from "../models/userAuth.js";
-import { sendResetLink } from "../models/userAuth.js";
-import { reset } from "../models/userAuth.js";
+import { createUserProfile, userLogin, sendResetLink, reset } from "../models/userAuth.js";
 
-// Create a user profile
-export async function createAUserProfile(req, res) {
+export async function createAUserProfile(req, res, next) {
   try {
     const data = await createUserProfile(req.body);
-    if (data === "Invalid payload") {
-      logger.error("Invalid payload");
+
+    if (!data) {
       return res.status(400).json({ error: "Invalid Request" });
-    } else if (data === "User exists") {
-      logger.error("User exists");
-      return res
-        .status(409)
-        .json({ error: "An account with this email exists already" });
     }
+
     const { userData, token } = data;
-    logger.info("REGISTRATION SUCCESSFUL", userData);
+
+    logger.info("Registration successful", userData);
+
     res.cookie("token", token);
+
     return res.status(201).json({
-      message: "REGISTRATION SUCCESSFUL",
-      Your_Details: userData,
-      token: token,
+      message: "Registration successful",
+      your_details: userData,
+      token,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-// Log in a user
-export async function logUser(req, res) {
+export async function logUser(req, res, next) {
   try {
-    const data = await userLogin(req.body);
-    if (data === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (data === "User doesn't exist" || data === "Invalid Email/Password") {
-      logger.error("Invalid Email/Password");
-      return res.status(401).json({ error: "Invalid Email/Password" });
-    }
+    const token = await userLogin(req.body);
 
-    logger.info("LOGIN SUCCESSFUL", data);
-    res.cookie("token", data, { httpOnly: true });
-    return res.status(201).json({
-      message: "LOGIN SUCCESSFUL",
-      token: data,
+    logger.info("Login successful");
+
+    res.cookie("token", token, { httpOnly: true });
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-// Send a password reset link
-export async function sendAResetLink(req, res) {
+export async function sendAResetLink(req, res, next) {
   try {
-    const { response } = await sendResetLink(req.body);
-    if (response === "Invalid Request") {
-      logger.error("Invalid Request");
-      return res.status(400).json({ error: "Invalid Request" });
-    }
-    if (response === "User doesn't exist") {
-      logger.error("User doesn't exist");
-      return res.status(404).json({ error: "User with email doesn't exist" });
-    }
+    await sendResetLink(req.body);
 
-    logger.info("YOUR RESET LINK HAS BEEN SENT TO YOUR EMAIL");
-    return res.status(201).json({
-      message: "YOUR RESET LINK HAS BEEN SENT TO YOUR EMAIL",
+    logger.info("Reset link sent");
+
+    return res.status(200).json({
+      message: "Password reset link has been sent to your email",
     });
   } catch (error) {
-    logger.error(error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    next(error);
   }
 }
 
-// Reset the user's password
-export async function resetPassword(req, res) {
+export async function resetPassword(req, res, next) {
   try {
-    const { email } = await req.user;
-    const data = await reset(email, req.body);
-    if (data === "Passwords don't match") {
-      logger.error("Passwords don't match");
-      return res.status(400).json({ error: "Passwords don't match" });
-    } else if (data === "Unable to Update Database") {
-      logger.error("Unable to Update Database");
-      return res.status(500).json({
-        message: "Internal Server Error",
-        error: "Unable to Update Database",
-      });
-    }
-    logger.info("PASSWORD HAS BEEN UPDATED SUCCESSFULLY");
-    return res.status(201).json({
-      message: "PASSWORD HAS BEEN UPDATED SUCCESSFULLY",
+    const { email } = req.user;
+
+    await reset(email, req.body);
+
+    logger.info("Password updated successfully");
+
+    return res.status(200).json({
+      message: "Password updated successfully",
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Internal Server Error",
-    });
+    next(error);
   }
 }
