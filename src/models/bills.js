@@ -6,40 +6,40 @@ import { getBillsOnAccountSchema } from "../validation/Schemas.js";
 import { currencyConverter } from "./layer.js";
 
 // Retrieve the account balance of a user's account.
-async function getAccountBalance(account_number) {
-  const query = `
-    SELECT account_balance 
-    FROM account 
-    WHERE account_number = $1`;
-  const { rows } = await client.query(query, [account_number]);
-  return rows[0].account_balance;
-}
+// async function getAccountBalance(account_number) {
+//   const query = `
+//     SELECT account_balance 
+//     FROM account 
+//     WHERE account_number = $1`;
+//   const { rows } = await client.query(query, [account_number]);
+//   return rows[0].account_balance;
+// }
 
 // Retrieve the account balance and currency code for a receiver's account.
-async function getReceiverAccountBalance(account_number) {
-  const query = `
-      SELECT *
-      FROM account 
-      WHERE account_number = $1 `;
-  const values = [account_number];
-  const { rows } = await client.query(query, values);
-  const balance = parseFloat(rows[0].account_balance);
-  const currency = rows[0].currency_code;
-  return { balance, currency };
-}
+// async function getReceiverAccountBalance(account_number) {
+//   const query = `
+//       SELECT *
+//       FROM account 
+//       WHERE account_number = $1 `;
+//   const values = [account_number];
+//   const { rows } = await client.query(query, values);
+//   const balance = parseFloat(rows[0].account_balance);
+//   const currency = rows[0].currency_code;
+//   return { balance, currency };
+// }
 
 // Update the account balance of a user's account.
-async function updateAccountBalance(account_number, amount) {
-  const query = `
-    UPDATE account
-    SET account_balance = $1
-    WHERE account_number = $2
-    RETURNING *
-  `;
-  const values = [amount, account_number];
-  const result = await client.query(query, values);
-  return result.rows[0];
-}
+// async function updateAccountBalance(account_number, amount) {
+//   const query = `
+//     UPDATE account
+//     SET account_balance = $1
+//     WHERE account_number = $2
+//     RETURNING *
+//   `;
+//   const values = [amount, account_number];
+//   const result = await client.query(query, values);
+//   return result.rows[0];
+// }
 
 // Make a bill payment
 export async function makeBillPayment(user_email, payload) {

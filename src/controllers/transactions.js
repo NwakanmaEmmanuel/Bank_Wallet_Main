@@ -16,10 +16,16 @@ export async function getAllTheTransactions(req, res, next) {
 
     logger.info("Transactions retrieved", transactions);
 
-    return res.status(200).json({
-      message: "Transactions",
-      details: transactions,
-    });
+    res.writeHead(200, {
+  "Content-Type": "application/pdf",
+  "Content-Disposition": "attachment;filename=transaction-history.pdf",
+});
+
+generatePDF(
+  JSON.stringify(transactions, null, 2),
+  (chunk) => res.write(chunk),
+  () => res.end()
+);
   } catch (error) {
     next(error);
   }

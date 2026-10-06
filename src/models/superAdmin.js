@@ -61,7 +61,6 @@ export async function sendAdminToken(super_admin_email, payload) {
     }
 
     const token = await generateAdminToken({ first_name, last_name, email });
-    console.log("ADMIN TOKEN:", token);
     await sendAdminRegisterTokenEmail(email, token);
 
     return true;
