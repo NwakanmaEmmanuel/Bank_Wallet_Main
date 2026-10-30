@@ -14,7 +14,7 @@ NOVA Bank is a full-stack banking application designed to provide users with a s
 
 The application supports core banking operations while following backend development practices such as authentication, authorization, input validation, database transactions, error handling, logging, and secure password management.
 
-The project is also being used as a practical full-stack learning project to understand how a real-world frontend communicates with a backend API.
+The project is also being used as a practical full-stack learning project to understand how a real-worlds frontend communicates with a backend API.
 
 ---
 
