@@ -7,10 +7,10 @@ function Navbar() {
         <div>
             <img src={BrandLogo} alt="Image of Brandlogo" className='cursor-pointer' />
         </div>
-        <div className='flex bg-[#FFFFFF0D] cursor-pointer p-3.5 px-7 gap-10 rounded-full font-medium border border-solid border-[#FFFFFF1A]'>
-            <p>Home</p>
-            <p>About</p>
-            <p>Services</p>
+        <div className='flex bg-[#FFFFFF0D] p-3.5 px-7 gap-10 rounded-full font-medium border border-solid border-[#FFFFFF1A]'>
+            <p className=' cursor-pointer'>Home</p>
+            <p className=' cursor-pointer'>About</p>
+            <p className=' cursor-pointer'>Services</p>
         </div>
         <div className='flex gap-3 '>
             <button className='bg-[#1F2937CC] cursor-pointer text-[#E5E7EB] font-semibold px-5 py-2.5 rounded-lg border border-solid border-[#4B5563]'>Login</button>
